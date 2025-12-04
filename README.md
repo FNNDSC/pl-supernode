@@ -13,9 +13,20 @@ docker run --rm --name fedmed-supernode --network fedmed-net \
   -v $(pwd)/demo/client-in:/incoming:ro \
   -v $(pwd)/demo/client-out:/outgoing:rw \
   fedmed/pl-supernode \
-    fedmed-pl-supernode --cid 0 --total-clients 1 \
-    --superlink-host ${FEDMED_SUPERLINK_IP} --superlink-port 9092 \
-    /incoming /outgoing
+    fedmed-pl-supernode \
+      --cid 0 \
+      --total-clients 3 \
+      --superlink-host ${FEDMED_SUPERLINK_IP} \
+      --data-seed 13 \
+      /incoming /outgoing
 ```
 
 Make sure `${FEDMED_SUPERLINK_IP}` is populated via `docker inspect fedmed-superlink` (see the SuperLink README). After the Flower round completes, the plugin writes `client_metrics.json` into `/outgoing` so downstream ChRIS components (or you) can inspect the results.
+
+### Accepted parameters
+- `--cid` (default: 0)
+- `--total-clients` (default: 3)
+- `--superlink-host` (default: `fedmed-pl-superlink`)
+- `--data-seed` (default: 13)
+
+All other options (SuperLink port `9092`, ClientApp host `0.0.0.0`/port `9094`, metrics filename, transport, FLWR state path) are now fixed to defaults and no longer exposed as CLI flags.

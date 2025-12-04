@@ -16,11 +16,12 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
 DEFAULT_CLIENTAPP_PORT = 9094
+DEFAULT_TOTAL_CLIENTS = 3
 DEFAULT_STATE_DIR = Path("/tmp/fedmed-flwr-node")
 DEFAULT_METRICS_FILE = "client_metrics.json"
 IMAGE_TAG = f"docker.io/fedmed/pl-supernode:{__version__}"
@@ -59,22 +60,19 @@ def build_parser() -> ArgumentParser:
         description="Run the FedMed Flower SuperNode inside ChRIS.",
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--cid", type=int, default=0, help="client id (partition id)")
-    parser.add_argument("--total-clients", type=int, default=1, help="logical clients")
-    parser.add_argument("--superlink-host", default="fedmed-pl-superlink", help="SuperLink host/IP")
-    parser.add_argument("--superlink-port", type=int, default=DEFAULT_SUPERLINK_PORT, help="SuperLink Fleet API port")
-    parser.add_argument("--clientapp-host", default="0.0.0.0", help="ClientAppIo bind host")
-    parser.add_argument("--clientapp-port", type=int, default=DEFAULT_CLIENTAPP_PORT, help="ClientAppIo bind port")
-    parser.add_argument("--data-seed", type=int, default=13, help="seed for synthetic data partitioning")
-    parser.add_argument("--metrics-file", default=DEFAULT_METRICS_FILE, help="filename to store metrics")
-    parser.add_argument("--state-dir", type=str, default=str(DEFAULT_STATE_DIR), help="directory used as FLWR_HOME")
-    parser.add_argument("--keep-state", action="store_true", help="keep Flower cache instead of deleting it")
-    parser.add_argument(
-        "--transport",
-        choices=["grpc-rere", "grpc-adapter", "rest"],
-        default="grpc-rere",
-        help="transport used to connect to the SuperLink",
+    parser.set_defaults(
+        superlink_port=DEFAULT_SUPERLINK_PORT,
+        clientapp_host="0.0.0.0",
+        clientapp_port=DEFAULT_CLIENTAPP_PORT,
+        metrics_file=DEFAULT_METRICS_FILE,
+        state_dir=str(DEFAULT_STATE_DIR),
+        keep_state=False,
+        transport="grpc-rere",
     )
+    parser.add_argument("--cid", type=int, default=0, help="client id (partition id)")
+    parser.add_argument("--total-clients", type=int, default=DEFAULT_TOTAL_CLIENTS, help="logical clients")
+    parser.add_argument("--superlink-host", default="fedmed-pl-superlink", help="SuperLink host/IP")
+    parser.add_argument("--data-seed", type=int, default=13, help="seed for synthetic data partitioning")
     parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-V",
