@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
@@ -143,6 +143,10 @@ def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     """Launch `flower-supernode`, capture streamed metrics, and return the last train summary."""
     targets = _build_targets(options)
     node_config = _build_node_config(options)
+    print(
+        f"[fedmed-pl-supernode:{options.cid}] targets superlink={targets.superlink} clientapp={targets.clientapp} node_config={node_config.as_flag()}",
+        flush=True,
+    )
     cmd: List[str] = [
         "flower-supernode",
         "--insecure",
@@ -184,9 +188,11 @@ def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     )
     stdout_thread.start()
     stderr_thread.start()
+    print(f"[fedmed-pl-supernode:{options.cid}] waiting for flower-supernode to finish...", flush=True)
     exit_code = proc.wait()
     stdout_thread.join()
     stderr_thread.join()
+    print(f"[fedmed-pl-supernode:{options.cid}] flower-supernode exited with {exit_code}", flush=True)
 
     if exit_code != 0:
         raise RuntimeError(f"flower-supernode exited with {exit_code}")
