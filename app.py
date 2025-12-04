@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
@@ -236,8 +236,8 @@ def _prepare_environment(state_root: str, cid: int) -> tuple[dict[str, str], Pat
     parser=parser,
     title="FedMed Flower SuperNode",
     category="Federated Learning",
-    min_memory_limit="200Mi",
-    min_cpu_limit="500m",
+    min_memory_limit="16Gi",
+    min_cpu_limit="1000m",
 )
 def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
     del inputdir
