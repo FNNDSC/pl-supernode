@@ -15,12 +15,13 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.9"
+__version__ = "0.1.0"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
 DEFAULT_CLIENTAPP_PORT = 9094
 DEFAULT_TOTAL_CLIENTS = 3
+DEFAULT_WAIT_TIMEOUT = 300
 DEFAULT_STATE_DIR = Path("/tmp/fedmed-flwr-node")
 DEFAULT_METRICS_FILE = "client_metrics.json"
 IMAGE_TAG = f"docker.io/fedmed/pl-supernode:{__version__}"
@@ -48,6 +49,12 @@ def build_parser() -> ArgumentParser:
     parser.add_argument("--total-clients", type=int, default=DEFAULT_TOTAL_CLIENTS, help="logical clients")
     parser.add_argument("--superlink-host", default="fedmed-pl-superlink", help="SuperLink host/IP")
     parser.add_argument("--data-seed", type=int, default=13, help="seed for synthetic data partitioning")
+    parser.add_argument(
+        "--wait-timeout",
+        type=float,
+        default=DEFAULT_WAIT_TIMEOUT,
+        help="seconds to wait for flower-supernode before giving up",
+    )
     parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-V",
@@ -167,7 +174,17 @@ def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     stdout_thread.start()
     stderr_thread.start()
     print(f"[fedmed-pl-supernode:{options.cid}] waiting for flower-supernode to finish...", flush=True)
-    exit_code = proc.wait()
+    try:
+        exit_code = proc.wait(timeout=options.wait_timeout)
+    except subprocess.TimeoutExpired:
+        print(
+            f"[fedmed-pl-supernode:{options.cid}] timed out after {options.wait_timeout}s; terminating...",
+            flush=True,
+        )
+        _terminate_process(proc)
+        stdout_thread.join()
+        stderr_thread.join()
+        raise RuntimeError(f"flower-supernode timed out after {options.wait_timeout}s")
     stdout_thread.join()
     stderr_thread.join()
     print(f"[fedmed-pl-supernode:{options.cid}] flower-supernode exited with {exit_code}", flush=True)
@@ -197,8 +214,8 @@ def _prepare_environment(state_root: str, cid: int) -> tuple[dict[str, str], Pat
     parser=parser,
     title="FedMed Flower SuperNode",
     category="Federated Learning",
-    min_memory_limit="32Gi",
-    min_cpu_limit="3000m",
+    min_memory_limit="4Gi",
+    min_cpu_limit="1000m",
 )
 def main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
     print(
