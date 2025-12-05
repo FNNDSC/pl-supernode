@@ -10,13 +10,12 @@ import subprocess
 import sys
 import threading
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
@@ -29,30 +28,6 @@ REPO_URL = "https://github.com/EC528-Fall-2025/FedMed-ChRIS"
 
 Process = subprocess.Popen
 CHILDREN: List[Process] = []
-
-
-@dataclass(frozen=True)
-class NodeConfig:
-    """Stable representation of the node-specific configuration."""
-
-    cid: int
-    total_clients: int
-    data_seed: int
-
-    def as_flag(self) -> str:
-        return (
-            f"partition-id={self.cid} "
-            f"num-partitions={self.total_clients} "
-            f"data-seed={self.data_seed}"
-        )
-
-
-@dataclass(frozen=True)
-class ConnectionTargets:
-    """Destination addresses for the Flower services used by the SuperNode."""
-
-    superlink: str
-    clientapp: str
 
 
 def build_parser() -> ArgumentParser:
@@ -141,20 +116,23 @@ def _stream_lines(stream, prefix: str, hook=None) -> None:  # type: ignore[overr
 
 def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     """Launch `flower-supernode`, capture streamed metrics, and return the last train summary."""
-    targets = _build_targets(options)
-    node_config = _build_node_config(options)
+    targets = {
+        "superlink": f"{options.superlink_host}:{options.superlink_port}",
+        "clientapp": f"{options.clientapp_host}:{options.clientapp_port}",
+    }
+    node_config = f"partition-id={options.cid} num-partitions={options.total_clients} data-seed={options.data_seed}"
     print(
-        f"[fedmed-pl-supernode:{options.cid}] targets superlink={targets.superlink} clientapp={targets.clientapp} node_config={node_config.as_flag()}",
+        f"[fedmed-pl-supernode:{options.cid}] targets superlink={targets['superlink']} clientapp={targets['clientapp']} node_config={node_config}",
         flush=True,
     )
     cmd: List[str] = [
         "flower-supernode",
         "--insecure",
         *_transport_flag(options.transport),
-        f"--superlink={targets.superlink}",
-        f"--clientappio-api-address={targets.clientapp}",
+        f"--superlink={targets['superlink']}",
+        f"--clientappio-api-address={targets['clientapp']}",
         "--node-config",
-        node_config.as_flag(),
+        node_config,
     ]
     print(f"[fedmed-pl-supernode] starting SuperNode: {' '.join(cmd)}", flush=True)
 
@@ -206,23 +184,6 @@ def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     return metrics
 
 
-def _build_node_config(options: Namespace) -> NodeConfig:
-    """Create a typed view of the node configuration inputs."""
-    return NodeConfig(
-        cid=options.cid,
-        total_clients=options.total_clients,
-        data_seed=options.data_seed,
-    )
-
-
-def _build_targets(options: Namespace) -> ConnectionTargets:
-    """Compute the SuperLink and ClientApp addresses."""
-    return ConnectionTargets(
-        superlink=f"{options.superlink_host}:{options.superlink_port}",
-        clientapp=f"{options.clientapp_host}:{options.clientapp_port}",
-    )
-
-
 def _prepare_environment(state_root: str, cid: int) -> tuple[dict[str, str], Path]:
     """Create a dedicated FLWR_HOME for this logical client id."""
     env = os.environ.copy()
@@ -236,11 +197,16 @@ def _prepare_environment(state_root: str, cid: int) -> tuple[dict[str, str], Pat
     parser=parser,
     title="FedMed Flower SuperNode",
     category="Federated Learning",
-    min_memory_limit="24Gi",
-    min_cpu_limit="2000m",
+    min_memory_limit="32Gi",
+    min_cpu_limit="3000m",
 )
-def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
-    print("[fedmed-pl-supernode] testing print statement", flush=True)
+def main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
+    print(
+        "\n==============================="
+        "\n=== FedMed Flower SuperNode ===\n"
+        "===============================\n",
+        flush=True,
+    )
     del inputdir
     handle_signals()
 
@@ -253,6 +219,8 @@ def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
     if options.cid < 0 or options.cid >= options.total_clients:
         raise ValueError("cid must be within [0, total-clients)")
 
+
+    # 
     env, flwr_home = _prepare_environment(options.state_dir, options.cid)
 
     summary = None
@@ -268,13 +236,6 @@ def _plugin_main(options: Namespace, inputdir: Path, outputdir: Path) -> None:
     if not options.keep_state:
         shutil.rmtree(flwr_home, ignore_errors=True)
         print(f"[fedmed-pl-supernode:{options.cid}] cleaned {flwr_home}", flush=True)
-
-
-def main(*args, **kwargs):
-    if not args and not kwargs and "--json" in sys.argv:
-        emit_plugin_json()
-        return
-    return _plugin_main(*args, **kwargs)
 
 
 def emit_plugin_json() -> None:

@@ -16,7 +16,7 @@ setup(
     description="Flower client ChRIS plugin used in the FedMed demo",
     author="FedMed BU Team",
     author_email="rpsmith@bu.edu",
-    url="https://github.com/EC528-Fall-2025/FedMed-ChRIS",
+    url="https://github.com/FNNDSC/pl-supernode",
     py_modules=["app"],
     install_requires=[
         "chris_plugin==0.4.0",
