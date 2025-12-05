@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
