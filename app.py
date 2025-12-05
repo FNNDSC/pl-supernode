@@ -21,7 +21,6 @@ SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
 DEFAULT_CLIENTAPP_PORT = 9094
 DEFAULT_TOTAL_CLIENTS = 3
-DEFAULT_WAIT_TIMEOUT = 300
 DEFAULT_STATE_DIR = Path("/tmp/fedmed-flwr-node")
 DEFAULT_METRICS_FILE = "client_metrics.json"
 IMAGE_TAG = f"docker.io/fedmed/pl-supernode:{__version__}"
@@ -49,12 +48,6 @@ def build_parser() -> ArgumentParser:
     parser.add_argument("--total-clients", type=int, default=DEFAULT_TOTAL_CLIENTS, help="logical clients")
     parser.add_argument("--superlink-host", default="fedmed-pl-superlink", help="SuperLink host/IP")
     parser.add_argument("--data-seed", type=int, default=13, help="seed for synthetic data partitioning")
-    parser.add_argument(
-        "--wait-timeout",
-        type=float,
-        default=float(DEFAULT_WAIT_TIMEOUT),
-        help="seconds to wait for flower-supernode before giving up",
-    )
     parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-V",
@@ -174,17 +167,7 @@ def _run_supernode(options: Namespace, env: dict[str, str]) -> Dict[str, Any]:
     stdout_thread.start()
     stderr_thread.start()
     print(f"[fedmed-pl-supernode:{options.cid}] waiting for flower-supernode to finish...", flush=True)
-    try:
-        exit_code = proc.wait(timeout=options.wait_timeout)
-    except subprocess.TimeoutExpired:
-        print(
-            f"[fedmed-pl-supernode:{options.cid}] timed out after {options.wait_timeout}s; terminating...",
-            flush=True,
-        )
-        _terminate_process(proc)
-        stdout_thread.join()
-        stderr_thread.join()
-        raise RuntimeError(f"flower-supernode timed out after {options.wait_timeout}s")
+    exit_code = proc.wait()
     stdout_thread.join()
     stderr_thread.join()
     print(f"[fedmed-pl-supernode:{options.cid}] flower-supernode exited with {exit_code}", flush=True)
