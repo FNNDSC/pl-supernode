@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 from chris_plugin import chris_plugin
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 SUMMARY_TOKEN = "[fedmed-supernode-app] SUMMARY "
 DEFAULT_SUPERLINK_PORT = 9092
@@ -52,7 +52,7 @@ def build_parser() -> ArgumentParser:
     parser.add_argument(
         "--wait-timeout",
         type=float,
-        default=DEFAULT_WAIT_TIMEOUT,
+        default=float(DEFAULT_WAIT_TIMEOUT),
         help="seconds to wait for flower-supernode before giving up",
     )
     parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
